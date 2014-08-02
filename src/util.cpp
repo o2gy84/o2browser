@@ -1,6 +1,92 @@
-#include "util.h"
 #include <string.h>
 #include <sstream>
+#include <assert.h>
+
+#include "util.h"
+
+
+void init_string(mpop_string *str)
+{
+  memset(str, 0, sizeof(mpop_string));
+}
+
+void free_string(mpop_string *str)
+{
+  if (str->string) free(str->string);
+  init_string(str);
+}
+
+void clear_string(mpop_string *str)
+{
+  if (str->string) *str->string  = 0;
+  str->size = 0;
+}
+
+void allocate_string(mpop_string *str, int need_size)
+{
+  if (str->alloc_size <= need_size)
+  {
+    str->alloc_size = (need_size + 255) & ~255;
+    if (str->string)
+    {
+      str->string = (char*)realloc(str->string, str->alloc_size);
+    }
+    else
+    {
+      str->string = (char*)malloc(str->alloc_size);
+      *str->string = 0;
+    }
+    assert(str->string!=NULL);
+  }
+}
+
+void add_stringn(mpop_string *str, const void *p, int n)
+{
+  char *np;
+
+  assert( p && str );
+
+  allocate_string(str, str->size + n + 1);
+  np = str->string + str->size;
+  memcpy(np, p, n);
+  np[n] = 0;
+  str->size += n;
+}
+
+void add_string(mpop_string *str, const char *p)
+{
+  add_stringn(str, p, strlen(p));
+}
+
+void add_char(mpop_string *str, char c)
+{
+  add_stringn(str, &c, 1);
+}
+
+
+const char* strcasestr(const char* str, const char* pattern)
+{
+    for( ;*str; ++str)
+    {
+        if(tolower(*str) == tolower(*pattern))
+        {
+            const char *s, *p;
+            for(s = str, p = pattern ; *s && *p; ++s, ++p)
+            {
+                if(tolower(*s) != tolower(*p))
+                    break;
+            }
+            if(*p == '\0')
+                return str;
+        }
+    }
+    return NULL;
+}
+
+int mb_compare_string_p(const void *p1, const void *p2)
+{
+    return strcmp(* (char * const *) p1, * (char * const *) p2);
+}
 
 //static
 bool UTIL::isUrl(const char* str, int len)

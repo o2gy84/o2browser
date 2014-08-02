@@ -7,6 +7,7 @@
 #include "tab.h"
 #include "util.h"
 #include "request.h"
+#include "html_parser.h"
 
 Tab::Tab(QWidget* parent)
     :
@@ -49,10 +50,19 @@ void Tab::doUrl(const std::string &url)
         std::cerr << "***\n";
         std::cerr << m_Client->response() << "\n";
 
+        HtmlParser parser;
+        parser.parse(m_Client->response());
+        std::cerr << "PARSER HTML: " << parser.getHtml().size() << " bytes\n";
+        std::cerr << parser.getHtml() << "\n";
+
+        std::cerr << "PARSER PLAIN: " << parser.getPlain().size() << " bytes\n";
+        std::cerr << parser.getPlain() << "\n";
+
         m_Content = m_Client->getHttpHeaders();
         m_Content += "****************\n";
         m_Content += "****************\n";
-        m_Content += m_Client->response();
+        //m_Content += m_Client->response();
+        m_Content += parser.getPlain();
     }
     catch(std::exception &e)
     {

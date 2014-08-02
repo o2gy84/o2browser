@@ -4,7 +4,27 @@
 #include <string>
 #include <vector>
 
-class UTIL {
+typedef struct mpop_string
+{
+    char *string;
+    int  size;
+    int  alloc_size;
+}
+mpop_string;
+
+void init_string(mpop_string *str);
+void free_string(mpop_string *str);
+void clear_string(mpop_string *str);
+void add_char(mpop_string *str, char c);
+void add_string(mpop_string *str, const char *s);
+void add_stringn(mpop_string *str, const void *s, int size);
+void allocate_string(mpop_string *str, int size);
+int mb_compare_string_p(const void *p1, const void *p2);
+
+const char *strcasestr(const char* str, const char* pattern);
+
+class UTIL
+{
 public:
 
     static bool isUrl(const char* str, int len);
