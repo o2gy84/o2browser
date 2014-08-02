@@ -426,9 +426,19 @@ std::size_t HttpClient::read()
     std::swap(m_HttpHeaders, m_Response);
     m_Response.clear();
 
+    size_t pos;
+
+    std::string location = "Location: ";
+    pos = m_HttpHeaders.find(location);
+    if (pos != std::string::npos)
+    {
+        size_t pos2 = m_HttpHeaders.find("\r\n", pos + location.size());
+        m_Location = m_HttpHeaders.substr(pos + location.size(), pos2 - pos - location.size());
+    }
+
     size_t body_size = 0;
     std::string cont_len = "Content-Length: ";
-    size_t pos = m_HttpHeaders.find(cont_len);
+    pos = m_HttpHeaders.find(cont_len);
     if (pos != std::string::npos)
         body_size = atoi(m_HttpHeaders.c_str() + pos + cont_len.size());
 
@@ -493,12 +503,13 @@ int HttpClient::responseCode() const throw (std::exception)
 
     // status like:
     // HTTP/1.1 200 OK
+    // HTTP/1.1 301 Moved Permanently
 
     std::vector<std::string> vec;
     UTIL::split(status, " ", vec);
 
-    if(vec.size() != 3)
-        throw std::runtime_error("invalid http header: no 3 parts");
+    if(vec.size() < 2)
+        throw std::runtime_error("invalid http header: " + status);
 
     return UTIL::s2i(vec[1]);
 }

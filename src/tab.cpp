@@ -23,6 +23,28 @@ Tab::~Tab()
 
 void Tab::doUrl(const std::string &url)
 {
+    int count = 5;
+    int http_code = -1;
+    std::string location;
+    std::string real_url = url;
+
+    for(int i = 0; i < count; ++i)
+    {
+        http_code = realDoUrl(real_url, location);
+        if(http_code == 301 && !location.empty())
+        {
+            std::cerr << "REDIRECT!!!\n";
+            real_url = location;
+            continue;
+        }
+
+        break;
+    }
+}
+
+int Tab::realDoUrl(const std::string &url, std::string &location)
+{
+    int ret = -1;
     bool ssl = UTIL::startsWith(url, "https");
     int port = (ssl)? 443 : 80;
     unsigned read_timeout = 5;  // sec
@@ -45,10 +67,13 @@ void Tab::doUrl(const std::string &url)
         m_Client->write(request);
         m_Client->read();
 
+        location = m_Client->getLocation();
+        ret = m_Client->responseCode();
+
         std::cerr << "RESPONSE:\n";
         std::cerr << m_Client->getHttpHeaders() << "\n";
-        std::cerr << "***\n";
-        std::cerr << m_Client->response() << "\n";
+        //std::cerr << "***\n";
+        //std::cerr << m_Client->response() << "\n";
 
         HtmlParser parser;
         parser.parse(m_Client->response());
@@ -72,6 +97,7 @@ void Tab::doUrl(const std::string &url)
 
     // generate paint event
     this->update();
+    return ret;
 }
 
 void Tab::makeLayout()

@@ -26,6 +26,9 @@ protected:
      void makeLayout();
 
 private:
+     int realDoUrl(const std::string &url, std::string &location);
+
+private:
      std::string m_Content;
      std::shared_ptr<QTextLayout> m_Layout;
      std::shared_ptr<QPainter> m_Painter;

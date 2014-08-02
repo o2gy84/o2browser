@@ -71,10 +71,12 @@ public:
 
 public:
     std::string const& getHttpHeaders() const { return m_HttpHeaders; }
+    std::string const& getLocation() const { return m_Location; }
     int responseCode() const throw (std::exception);
 
 private:
     std::string m_HttpHeaders;
+    std::string m_Location;
 };
 
 
