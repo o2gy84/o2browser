@@ -1,0 +1,35 @@
+#ifndef TAB_H
+#define TAB_H
+
+#include "client.h"
+
+#include <QWidget>
+#include <QTextLayout>
+#include <QPainter>
+
+#include <memory>
+
+class Tab: public QWidget
+{
+    Q_OBJECT
+public slots:
+    void paintEvent(QPaintEvent *event);
+
+public:
+     Tab(QWidget* parent = NULL);
+     virtual ~Tab();
+
+     // WORK
+     void doUrl(const std::string &url);
+
+protected:
+     void makeLayout();
+
+private:
+     std::string m_Content;
+     std::shared_ptr<QTextLayout> m_Layout;
+     std::shared_ptr<QPainter> m_Painter;
+     std::shared_ptr<HttpClient> m_Client;
+};
+
+#endif // TAB_H
