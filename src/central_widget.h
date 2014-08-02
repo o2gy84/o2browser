@@ -1,11 +1,10 @@
 #ifndef CENTRAL_WIDGET_H
 #define CENTRAL_WIDGET_H
 
-#include "tabs.h"
-
 #include <QWidget>
 #include <QLineEdit>
 
+#include "tabs.h"
 
 class CentralWidget : public QWidget
 {

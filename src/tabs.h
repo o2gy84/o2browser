@@ -1,14 +1,14 @@
 #ifndef TABS_H
 #define TABS_H
 
-#include "tab.h"
-
 #include <vector>
 #include <string>
 #include <memory>
 
 #include <QTabWidget>
 #include <QTabBar>
+
+#include "tab.h"
 
 class Tabs: public QTabWidget
 {
@@ -24,7 +24,7 @@ public slots:
 public:
     Tabs(QWidget* parent = NULL);
 
-    QTabBar* tabBar();      ///< Overridden method from QTabWidget
+    QTabBar* tabBar();                  ///< Overridden method from QTabWidget
     void addTab(const QString &str);
 
     // WORK

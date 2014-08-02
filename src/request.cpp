@@ -1,8 +1,8 @@
-#include "request.h"
-#include "util.h"
-
 #include <exception>
 #include <stdexcept>
+
+#include "request.h"
+#include "util.h"
 
 Request::Request(const std::string& url)
 {
@@ -29,6 +29,11 @@ Request::Request(const std::string& url)
 
     m_GetRequestString = "GET " + params;
     m_GetRequestString += std::string(" HTTP/1.1\r\nHost: ") + m_Host;
+    {
+        //m_GetRequestString += std::string("\r\nUser-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/36.0.1985.125 Safari/537.36");
+        m_GetRequestString += std::string("\r\nUser-Agent: o2browser");
+        //m_GetRequestString += std::string("\r\nAccept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8");
+    }
     m_GetRequestString += "\r\n\r\n";
 
     std::string post_params = "";

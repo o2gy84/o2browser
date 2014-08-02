@@ -1,13 +1,13 @@
 #ifndef TAB_H
 #define TAB_H
 
-#include "client.h"
-
 #include <QWidget>
 #include <QTextLayout>
 #include <QPainter>
 
 #include <memory>
+
+#include "client.h"
 
 class Tab: public QWidget
 {

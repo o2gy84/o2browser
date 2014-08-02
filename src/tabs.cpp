@@ -1,6 +1,7 @@
+#include <iostream>
+
 #include "tabs.h"
 #include "tab.h"
-#include <iostream>
 
 Tabs::Tabs(QWidget* parent)
     :

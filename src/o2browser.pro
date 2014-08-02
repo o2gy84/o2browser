@@ -26,7 +26,8 @@ SOURCES += main.cpp\
     util.cpp \
     client.cpp \
     request.cpp \
-    response.cpp
+    response.cpp \
+    html_parser.cpp
 
 HEADERS  += mainwindow.h \
     tabs.h \
@@ -35,4 +36,5 @@ HEADERS  += mainwindow.h \
     util.h \
     client.h \
     request.h \
-    response.h
+    response.h \
+    html_parser.h

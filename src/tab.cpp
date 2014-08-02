@@ -1,12 +1,12 @@
-#include "tab.h"
-#include "util.h"
-#include "request.h"
-
 #include <iostream>
 #include <memory>
 
 #include <QFont>
 #include <QFontMetrics>
+
+#include "tab.h"
+#include "util.h"
+#include "request.h"
 
 Tab::Tab(QWidget* parent)
     :
@@ -38,13 +38,16 @@ void Tab::doUrl(const std::string &url)
         m_Client->handshake();
 
         std::string request = req.toGetRequsetString();
-        std::cerr<<"req: " << request << "\n";
+
+        std::cerr<<"REQUEST:\n" << request << "\n";
 
         m_Client->write(request);
         m_Client->read();
 
-        std::cerr << "Headers: " << m_Client->getHttpHeaders() << "\n";
-        std::cerr << "Body: " << m_Client->response() << "\n";
+        std::cerr << "RESPONSE:\n";
+        std::cerr << m_Client->getHttpHeaders() << "\n";
+        std::cerr << "***\n";
+        std::cerr << m_Client->response() << "\n";
 
         m_Content = m_Client->getHttpHeaders();
         m_Content += "****************\n";

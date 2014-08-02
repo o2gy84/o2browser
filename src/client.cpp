@@ -1,12 +1,13 @@
-#include "client.h"
-#include "util.h"
-
 #include <boost/predef.h>
 #include <boost/optional.hpp>
 #include <boost/bind.hpp>
 
 #include <thread>
 #include <string>
+
+#include "client.h"
+#include "util.h"
+
 
 TcpClient::TcpClient(unsigned timeout):
     m_Ctx(boost::asio::ssl::context::sslv23_client),
@@ -17,7 +18,7 @@ TcpClient::TcpClient(unsigned timeout):
     m_IsOpen(false),
     m_OwnIO(true),
     m_ExternalStrand(),
-    delimiter("\r\n")
+    m_Delimiter("\r\n")
 {
     m_Stream.set_verify_mode(boost::asio::ssl::verify_none);
 #if defined(BOOST_OS_WINDOWS)
@@ -37,7 +38,7 @@ TcpClient::TcpClient(boost::asio::io_service& _io, boost::asio::io_service::stra
     m_OwnIO(false),
     m_IsOpen(false),
     m_ExternalStrand(strand),
-    delimiter("\r\n")
+    m_Delimiter("\r\n")
 {
     m_Stream.set_verify_mode(boost::asio::ssl::verify_none);
 #if defined(BOOST_OS_WINDOWS)
@@ -121,9 +122,9 @@ size_t TcpClient::read_with_timeout()
     auto read_callback = boost::bind(read_completed, boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred, std::ref(bytes), &read_result);
 
     if(ssl())
-        boost::asio::async_read_until(m_Stream, m_Streambuf, delimiter, read_callback);
+        boost::asio::async_read_until(m_Stream, m_Streambuf, m_Delimiter, read_callback);
     else
-        boost::asio::async_read_until(m_Stream.next_layer(), m_Streambuf, delimiter, read_callback);
+        boost::asio::async_read_until(m_Stream.next_layer(), m_Streambuf, m_Delimiter, read_callback);
 
     while(m_IoService->run_one())
     {
@@ -137,12 +138,12 @@ size_t TcpClient::read_with_timeout()
     if (read_result && *read_result)
         throw std::runtime_error("read failed: " + read_result->message());
 
-    m_Response.resize(bytes - delimiter.size());
+    m_Response.resize(bytes - m_Delimiter.size());
     {
         std::istream is(&m_Streambuf);
         is.read(const_cast<char *>(m_Response.data()), m_Response.size());
     }
-    m_Streambuf.consume(delimiter.size());
+    m_Streambuf.consume(m_Delimiter.size());
     return bytes;
 }
 
@@ -175,9 +176,9 @@ std::size_t TcpClient::read(boost::asio::streambuf& buf)
     {
         auto read_callback = boost::bind(read_completed, boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred, std::ref(bytes), &read_result);
         if(ssl())
-            boost::asio::async_read_until(m_Stream, buf, delimiter, read_callback);
+            boost::asio::async_read_until(m_Stream, buf, m_Delimiter, read_callback);
         else
-            boost::asio::async_read_until(m_Stream.next_layer(), buf, delimiter, read_callback);
+            boost::asio::async_read_until(m_Stream.next_layer(), buf, m_Delimiter, read_callback);
     }
     else
     {
@@ -186,9 +187,9 @@ std::size_t TcpClient::read(boost::asio::streambuf& buf)
 
         auto read_callback = m_ExternalStrand->wrap(boost::bind(read_completed2, m_IoService, boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred, std::ref(bytes), &read_result));
         if(ssl())
-            boost::asio::async_read_until(m_Stream, buf, delimiter, read_callback);
+            boost::asio::async_read_until(m_Stream, buf, m_Delimiter, read_callback);
         else
-            boost::asio::async_read_until(m_Stream.next_layer(), buf, delimiter, read_callback);
+            boost::asio::async_read_until(m_Stream.next_layer(), buf, m_Delimiter, read_callback);
     }
 
     while(m_IoService->run_one())
@@ -238,12 +239,12 @@ std::size_t TcpClient::read(boost::asio::streambuf& buf)
     if (read_result && *read_result)
         throw std::runtime_error("read failed: " + read_result->message());
 
-    m_Response.resize(bytes - delimiter.size());
+    m_Response.resize(bytes - m_Delimiter.size());
     {
         std::istream is(&buf);
         is.read(const_cast<char *>(m_Response.data()), m_Response.size());
     }
-    buf.consume(delimiter.size());
+    buf.consume(m_Delimiter.size());
     return bytes;
 }
 
@@ -408,32 +409,72 @@ void TcpClient::shutdown()
 }
 
 /*********************************************************************
-                EXCHANGE ACTIVE SYNC CLIENT
+                HTTP CLIENT
 *********************************************************************/
 
 HttpClient::HttpClient(unsigned timeout):
     TcpClient(timeout)
 {
-    delimiter="\r\n\r\n";
+    m_Delimiter="\r\n\r\n";
 }
 
 std::size_t HttpClient::read()
 {
     // Читаем заголовки
-    std::size_t end_header = TcpClient::read();
+    std::size_t header_size = TcpClient::read();
 
     std::swap(m_HttpHeaders, m_Response);
     m_Response.clear();
 
-    size_t body_len = 0;
+    size_t body_size = 0;
     std::string cont_len = "Content-Length: ";
     size_t pos = m_HttpHeaders.find(cont_len);
     if (pos != std::string::npos)
-        body_len = atoi(m_HttpHeaders.c_str() + pos + cont_len.size());
+        body_size = atoi(m_HttpHeaders.c_str() + pos + cont_len.size());
 
     // Читаем тело http-ответа
-    if (body_len) TcpClient::read(body_len, 180 /*FIXME*/);
-    return (end_header + body_len);
+    if (body_size)
+    {
+        TcpClient::read(body_size, m_Timeout);
+    }
+    else
+    {
+        std::string transfer_encoding = "Transfer-Encoding: ";
+        pos = m_HttpHeaders.find(transfer_encoding);
+        if (pos != std::string::npos)
+        {
+            std::string chunked = "chunked";
+            std::string transfer_encoding_value = m_HttpHeaders.substr(pos + transfer_encoding.size(), chunked.size());
+            if(transfer_encoding_value != chunked)
+                throw std::runtime_error("No content length available, transfer_encoding: " + transfer_encoding_value);
+        }
+        else
+            throw std::runtime_error("No content length available");
+
+        // is chunked!
+        std::string tmp;
+        m_Delimiter = "\r\n";
+        // FIXME: http://ru.wikipedia.org/wiki/Chunked_transfer_encoding
+        // Наверное, стоит придумать алгоритм получше :)
+        while(1)
+        {
+            TcpClient::read();
+            int chunk_size = strtol(m_Response.c_str(), NULL, 16);
+            body_size += chunk_size;
+
+            std::cerr << "CUNK SIZE: " << chunk_size << "\n";
+
+            if(chunk_size == 0)
+                break;
+
+            TcpClient::read(chunk_size + 2/*+CRLF*/, m_Timeout);
+            tmp += m_Response;
+        }
+        m_Response = tmp;
+        m_Delimiter = "\r\n\r\n";
+    }
+
+    return (header_size + body_size);
 }
 
 int HttpClient::responseCode() const throw (std::exception)

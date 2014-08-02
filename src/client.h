@@ -41,7 +41,8 @@ private:
 
 protected:
     std::string m_Response;
-    std::string delimiter;
+    std::string m_Delimiter;
+    unsigned m_Timeout;
 
 private:
 
@@ -53,7 +54,6 @@ private:
 
     boost::asio::ssl::context m_Ctx;
     boost::asio::ssl::stream<boost::asio::ip::tcp::socket> m_Stream;
-    unsigned m_Timeout;
 
     bool m_IsSSL;
     bool m_OwnIO;
