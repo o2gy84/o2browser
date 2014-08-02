@@ -31,7 +31,7 @@ void Tab::doUrl(const std::string &url)
     for(int i = 0; i < count; ++i)
     {
         http_code = realDoUrl(real_url, location);
-        if(http_code == 301 && !location.empty())
+        if( (http_code > 300) && (http_code < 310) && !location.empty())
         {
             std::cerr << "REDIRECT!!!\n";
             real_url = location;
@@ -65,7 +65,8 @@ int Tab::realDoUrl(const std::string &url, std::string &location)
         std::cerr<<"REQUEST:\n" << request << "\n";
 
         m_Client->write(request);
-        m_Client->read();
+        int bytes = m_Client->read();
+        std::cerr <<"read bytes: " << bytes << "\n";
 
         location = m_Client->getLocation();
         ret = m_Client->responseCode();

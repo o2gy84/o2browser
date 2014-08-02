@@ -459,7 +459,12 @@ std::size_t HttpClient::read()
                 throw std::runtime_error("No content length available, transfer_encoding: " + transfer_encoding_value);
         }
         else
+        {
+            if(!m_Location.empty())
+                return header_size;
+
             throw std::runtime_error("No content length available");
+        }
 
         // is chunked!
         std::string tmp;
