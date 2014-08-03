@@ -3,11 +3,6 @@
 #include "html_parser.h"
 #include "util.h"
 
-#define kMaxTagLen           256			// max len of tag name
-#define kMaxAttrLen          256			// max len of attribute name
-#define kMaxAttrValueLen     65535			// max len of attribute value
-#define kMaxFullClosedTagLen 65535			// max len of full html construction like   <some_tag ...bla...bla...bla.. / >
-#define kMemcKeyLen	         250			// memcached keys length
 
 #define MAX_TAG_STACK_SIZE   16384			// max stack size
 
@@ -54,12 +49,6 @@ bool is_corp_user	    = false;	// true, if corp user. defined in MessageProcesso
 
 
 typedef struct {
-    char   name[kMaxTagLen];	// name of tag
-    bool   open;		    	// true if <tag>, false if </tag>
-    size_t position;		    // tag position in letter
-} tag_t;
-
-typedef struct {
     int in_href;       // counter вложенности href'ов
     int in_pre;        // counter вложенности pre'ов
     int in_blockquote; // counter вложенности blockquotes'ов
@@ -67,20 +56,6 @@ typedef struct {
     int in_span;       // counter вложенности span'ов
     int in_table;      // counter вложенности table'ов
 } tag_nesting_t;
-
-typedef struct xtext_t {		// using for ban images
-    struct xtext_t* next;
-    char		memc_key[kMemcKeyLen+1];
-    size_t    	position;
-    size_t   	len;
-} xtext_t;
-
-typedef struct {			// list of images, who would be scanned in memcached for ban
-    xtext_t* first;
-    xtext_t* last;
-    size_t   count;			// количество найденных картинок
-    size_t   total_len;		// общая длина всех урлов картинок
-} xtext_list_t;
 
 typedef enum {
     E_NONE = 0,
@@ -445,8 +420,11 @@ static int call_perl_attribute_checker(const char* method, const char* tag, cons
     return 1;
 }
 
-static inline int url_in_style_process(char* str, const char** _black_ref_list, size_t _b_ref_list_size)
+int HtmlParser::url_in_style_process(char* str, const char** _black_ref_list, size_t _b_ref_list_size)
 {
+    // TODO: str - is no url!!! is just may be contained some url
+    m_Links.push_back(str);
+
     const char* buf;
     static char from_perl_buf[kMaxAttrValueLen];
     size_t fpb_len;
@@ -543,7 +521,9 @@ if(!has_utf && !is_ignored_style_property(property, p_value)) \
     } \
 } \
 
-static inline int check_style(const char* _str, int _len, char _external_quote, char* inner_quot, char*  _res, const char** _black_ref_list, size_t _b_ref_list_size)
+int HtmlParser::check_style(const char* _str, int _len, char _external_quote,
+                                    char* inner_quot, char*  _res, const char** _black_ref_list,
+                                    size_t _b_ref_list_size)
 /*
     _str - is style attribute value
     _len - size of value
@@ -1543,7 +1523,10 @@ static bool xss_cut_some_tags(char const * _ptr, char const ** _cut_it, mpop_str
 
 
 
-static int xss_attribute_parsing(const char* _begin, const char* _end, tag_t* tag, const char** _black_list, size_t _b_list_size, const char** _black_ref_list, size_t _b_ref_list_size, xtext_list_t* _xtext_list, char* _attr_str)
+int HtmlParser::xss_attribute_parsing(const char* _begin, const char* _end, tag_t* tag,
+                                        const char** _black_list, size_t _b_list_size,
+                                        const char** _black_ref_list, size_t _b_ref_list_size,
+                                        xtext_list_t* _xtext_list, char* _attr_str)
 /**
  * @brief парсинг атрибутов
  *
@@ -1723,6 +1706,7 @@ static int xss_attribute_parsing(const char* _begin, const char* _end, tag_t* ta
                     // Анализ атрибутов
                     if( strcmp(attr, "src")==0 || strcmp(attr, "lowsrc")==0 || strcmp(attr, "dynsrc")==0 )
                     {
+                        m_Links.push_back(val);
                         // оставлять только что-то вроде src=http:bla , src=https:bla, src= "   http:bla" , src= "  https:bla"
                         static const char* good_attr_in_src[] = {"http", "https", "cid", "data"};
                         static size_t good_count = sizeof(good_attr_in_src) / sizeof (good_attr_in_src[0]);
@@ -1786,6 +1770,7 @@ static int xss_attribute_parsing(const char* _begin, const char* _end, tag_t* ta
                     }
                     else if( strcmp(attr, href)   == 0 )
                     {
+                        m_Links.push_back(val);
                         char* href_begin = val;
                         has_href = true;
                         if( *href_begin  == '#') 						                        href_link = IS_OKTOTORP;

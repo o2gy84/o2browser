@@ -17,8 +17,8 @@ Tab::Tab(QWidget* parent):
     QSizePolicy sp;
     sp.setHorizontalPolicy(QSizePolicy::Maximum);
 
-    m_Page->headersArea().get()->setFixedHeight(50);
-    m_Page->linksArea().get()->setFixedHeight(50);
+    m_Page->headersArea().get()->setFixedHeight(70);
+    m_Page->linksArea().get()->setFixedHeight(100);
     //m_Page->headersArea().get()->setSizePolicy(sp);
     //m_Page->headersArea().get()->setSizeAdjustPolicy();
 
@@ -106,6 +106,7 @@ int Tab::realDoUrl(const std::string &url, std::string &location)
         m_Headers = m_Client->getHttpHeaders();
         m_Body = parser.getPlain();
         //m_Body = parser.getHtml();
+        m_Links = parser.getLinks();
     }
     catch(std::exception &e)
     {
