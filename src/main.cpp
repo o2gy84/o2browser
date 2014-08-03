@@ -5,10 +5,6 @@
 #include <QVBoxLayout>
 
 
-//#include <boost/shared_ptr.hpp>
-//#include <boost/thread.hpp>
-
-
 int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
@@ -19,11 +15,11 @@ int main(int argc, char *argv[])
 
     std::shared_ptr<CentralWidget> cw(new CentralWidget(w));
     std::shared_ptr<QVBoxLayout> layout (new QVBoxLayout());
-    layout->addWidget(cw->line().get());
+    layout->addWidget(cw->searchLine().get());
     layout->addWidget(cw->tabs().get());
     cw->setLayout(layout.get());
 
-    cw->line().get()->setFocus();
+    cw->searchLine().get()->setFocus();
     w->setCentralWidget(cw.get());
     w->show();
 

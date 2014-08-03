@@ -27,9 +27,9 @@ QTabBar* Tabs::tabBar()
 
 void Tabs::addTab(const QString &str)
 {
-    std::shared_ptr<Tab> t(new Tab());
+    std::shared_ptr<Tab> t(new Tab(this));
     m_Tabs.push_back(t);
-    this->QTabWidget::addTab( t.get() , str);
+    this->QTabWidget::addTab(t.get(), str);
 }
 
 
@@ -84,10 +84,10 @@ void Tabs::doubleClicked(int index)
 
     m_PrevDoubleClicked = index;
 
-    std::shared_ptr<Tab> t(new Tab());
+    std::shared_ptr<Tab> t(new Tab(this));
     std::vector<std::shared_ptr<Tab>>::iterator it = m_Tabs.begin() + index + 1;
     m_Tabs.insert(it, t);
-    insertTab(index + 1, t.get(), "default");
+    QTabWidget::insertTab(index + 1, t.get(), "default");
 }
 
 //slot

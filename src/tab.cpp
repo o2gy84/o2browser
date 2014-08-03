@@ -3,23 +3,42 @@
 
 #include <QFont>
 #include <QFontMetrics>
+#include <QSizePolicy>
 
 #include "tab.h"
 #include "util.h"
 #include "request.h"
 #include "html_parser.h"
 
-Tab::Tab(QWidget* parent)
-    :
-      m_Layout(new QTextLayout())
+Tab::Tab(QWidget* parent):
+    QWidget(parent),
+    m_Page(new Page(this))
 {
+    QSizePolicy sp;
+    sp.setHorizontalPolicy(QSizePolicy::Maximum);
+
+    m_Page->headersArea().get()->setFixedHeight(50);
+    m_Page->linksArea().get()->setFixedHeight(50);
+    //m_Page->headersArea().get()->setSizePolicy(sp);
+    //m_Page->headersArea().get()->setSizeAdjustPolicy();
+
+    m_Page->headersArea().get()->setReadOnly(true);
+    m_Page->linksArea().get()->setReadOnly(true);
+    m_Page->bodyArea().get()->setReadOnly(true);
+
+    m_VertLayout.reset(new QVBoxLayout(this));
+    m_VertLayout->addWidget(m_Page->headersArea().get());
+    m_VertLayout->addWidget(m_Page->linksArea().get());
+    m_VertLayout->addWidget(m_Page->bodyArea().get());
+
+    setLayout(m_VertLayout.get());
+
+    QObject::connect(this, SIGNAL(needReloadPage()), this, SLOT(reloadPage()));
 }
 
 Tab::~Tab()
 {
 }
-
-
 
 void Tab::doUrl(const std::string &url)
 {
@@ -62,101 +81,48 @@ int Tab::realDoUrl(const std::string &url, std::string &location)
 
         std::string request = req.toGetRequsetString();
 
-        std::cerr<<"REQUEST:\n" << request << "\n";
+        std::cerr << "\nREQUEST:\n" << request << "\n";
 
         m_Client->write(request);
         int bytes = m_Client->read();
-        std::cerr <<"read bytes: " << bytes << "\n";
+        std::cerr << "read bytes: " << bytes << "\n";
 
         location = m_Client->getLocation();
         ret = m_Client->responseCode();
 
-        std::cerr << "RESPONSE:\n";
+        std::cerr << "\nRESPONSE:\n";
         std::cerr << m_Client->getHttpHeaders() << "\n";
         //std::cerr << "***\n";
         //std::cerr << m_Client->response() << "\n";
 
         HtmlParser parser;
         parser.parse(m_Client->response());
-        std::cerr << "PARSER HTML: " << parser.getHtml().size() << " bytes\n";
+        std::cerr << "\nPARSER HTML: " << parser.getHtml().size() << " bytes\n";
         std::cerr << parser.getHtml() << "\n";
 
-        std::cerr << "PARSER PLAIN: " << parser.getPlain().size() << " bytes\n";
+        std::cerr << "\nPARSER PLAIN: " << parser.getPlain().size() << " bytes\n";
         std::cerr << parser.getPlain() << "\n";
 
-        m_Content = m_Client->getHttpHeaders();
-        m_Content += "****************\n";
-        m_Content += "****************\n";
-        //m_Content += m_Client->response();
-        m_Content += parser.getPlain();
+        m_Headers = m_Client->getHttpHeaders();
+        m_Body = parser.getPlain();
+        //m_Body = parser.getHtml();
     }
     catch(std::exception &e)
     {
-        m_Content = e.what();
-        m_Content += " [host: " + host + ", port: " + UTIL::i2s(port) + "]";
+        m_Body = e.what();
+        m_Body += " [host: " + host + ", port: " + UTIL::i2s(port) + "]";
     }
 
     // generate paint event
-    this->update();
+    //this->update();
+
+    emit needReloadPage();
     return ret;
 }
 
-void Tab::makeLayout()
+
+
+void Tab::reloadPage()
 {
-    int size = 10;
-    int weigth = -1;
-
-    QFont font("Times", size, weigth);
-    QFontMetrics metrics(font);
-
-    QTextOption opt;
-    opt.setWrapMode(QTextOption::WrapAtWordBoundaryOrAnywhere);
-
-    m_Layout->setText(m_Content.c_str());
-    m_Layout->setFont(font);
-    m_Layout->setTextOption(opt);
-
-    int leading = metrics.leading();
-
-    //m_Layout->setCacheEnabled(true);
-    int height = 10;
-    m_Layout->beginLayout();
-    while (1)
-    {
-        QTextLine line = m_Layout->createLine();
-        if (!line.isValid())
-            break;
-
-        line.setLineWidth(this->width());
-        height += leading;
-        line.setPosition(QPointF(0, height));
-        height += line.height();
-    }
-    m_Layout->endLayout();
-}
-
-void Tab::paintEvent(QPaintEvent *event)
-{
-    if(!m_Content.empty())
-    {
-        makeLayout();
-    }
-    else
-        return;
-
-    if(!m_Painter)
-    {
-        m_Painter.reset(new QPainter(this));
-    }
-
-    m_Painter->begin(this);
-
-    QPen pen;
-    //pen.setColor(QColor(0, 0, 127));
-    pen.setColor(Qt::black);
-
-    m_Painter->eraseRect(QRect(0, 0, width(), height()));
-    m_Painter->setPen(pen);
-    m_Layout->draw(m_Painter.get(), QPoint(0, 0));
-    m_Painter->end();
+    m_Page->showContent(m_Headers, m_Body, m_Links);
 }

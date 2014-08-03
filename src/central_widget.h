@@ -19,7 +19,7 @@ public:
 
     // GETTERS
     std::shared_ptr<Tabs> tabs() const {return m_Tabs;}
-    std::shared_ptr<QLineEdit> line() const {return m_LineEdit;}
+    std::shared_ptr<QLineEdit> searchLine() const {return m_LineEdit;}
 
 private:
 
